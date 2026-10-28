@@ -1,14 +1,17 @@
 name = "syncflix-worker"
 main = "src/index.js"
-compatibility_date = "2026-10-28"
+compatibility_date = "2026-10-27"
 
+# اتصال (Binding) برای دسترسی کد به Durable Object
 [[durable_objects.bindings]]
 name = "ROOM_DO"
 class_name = "RoomDO"
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["RoomDO"]
+# تعریف صریح کلاس Durable Object و نوع ذخیره‌سازی SQLite
+[exports.RoomDO]
+type = "durable-object"
+storage = "sqlite"
 
+# متغیرهای محیطی (CORS)
 [vars]
 ALLOWED_ORIGINS = "*"

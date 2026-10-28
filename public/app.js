@@ -140,7 +140,7 @@ function connectWS() {
     setConn("offline");
     scheduleReconnect();
   };
-  ws.onerror = () => try { ws.close(); } catch {}
+  ws.onerror = () => { try { ws.close(); } catch {} };
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.serverTime) noteServerTime(m.serverTime);

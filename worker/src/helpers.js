@@ -1,21 +1,8 @@
-export function json(data, status = 200, extra = {}) {
+export function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...extra },
+    headers: { "Content-Type": "application/json; charset=utf-8" },
   });
-}
-
-export function corsHeaders(request, env) {
-  const origin = request.headers.get("Origin") || "";
-  const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const ok = allowed.includes(origin) || allowed.includes("*");
-  return {
-    "Access-Control-Allow-Origin": ok ? origin : (allowed[0] || ""),
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
-  };
 }
 
 export function randomId(bytes = 16) {

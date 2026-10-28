@@ -1,10 +1,9 @@
 /* ============================================================
-   SyncFlix Frontend v3
-   Worker: https://SyncFlix.xxui5087.workers.dev
+   SyncFlix Frontend v4 — یکپارچه روی Worker
    ============================================================ */
 
-const WORKER_BASE = "https://SyncFlix.xxui5087.workers.dev";
-const WS_BASE = WORKER_BASE.replace(/^http/, "ws");
+// از همان مبدأ استفاده می‌کنیم:
+const WS_BASE = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
 
 const state = {
   sessionToken: null,
@@ -35,7 +34,6 @@ const roomView = $("#room");
 const video = $("#video");
 const videoOverlay = $("#videoOverlay");
 
-/* ---------- ابزار ---------- */
 function toast(msg, ms = 2600) {
   const t = $("#toast");
   t.textContent = msg;
@@ -43,27 +41,23 @@ function toast(msg, ms = 2600) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => t.classList.add("hidden"), ms);
 }
-
 function showView(name) {
   landing.classList.toggle("active", name === "landing");
   roomView.classList.toggle("active", name === "room");
 }
-
 function setConn(status) {
   const el = $("#connStatus");
   el.textContent = status === "online" ? "متصل" : status === "connecting" ? "..." : "قطع";
   el.className = "status " + (status === "online" ? "online" : "offline");
 }
-
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-/* ---------- HTTP ---------- */
 async function api(path, body) {
-  const res = await fetch(WORKER_BASE + path, {
+  const res = await fetch(path, {
     method: body ? "POST" : "GET",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -73,7 +67,7 @@ async function api(path, body) {
   return data;
 }
 
-/* ---------- ساخت اتاق ---------- */
+/* ساخت اتاق */
 $("#btnCreate").onclick = async () => {
   const name = $("#createName").value.trim();
   const movie = $("#createMovie").value.trim();
@@ -90,7 +84,7 @@ $("#btnCreate").onclick = async () => {
   } catch (e) { toast(e.message); }
 };
 
-/* ---------- ورود با کد ---------- */
+/* ورود */
 $("#btnJoin").onclick = async () => {
   const code = $("#joinCode").value.trim();
   const name = $("#joinName").value.trim();
@@ -109,7 +103,6 @@ $("#btnJoin").onclick = async () => {
   } catch (e) { err.textContent = e.message; }
 };
 
-/* ---------- لینک دعوت از URL ---------- */
 (function checkInvite() {
   const p = new URLSearchParams(location.search);
   const room = p.get("room");
@@ -127,7 +120,6 @@ function enterRoom() {
   startDriftCheck();
 }
 
-/* ---------- WebSocket ---------- */
 function connectWS() {
   if (state.ws) try { state.ws.close(); } catch {}
   setConn("connecting");
@@ -143,15 +135,12 @@ function connectWS() {
     flushOutbox();
     send({ type: "sync_request" });
   };
-
   ws.onclose = () => {
     state.wsOpen = false;
     setConn("offline");
     scheduleReconnect();
   };
-
-  ws.onerror = () => { try { ws.close(); } catch {} };
-
+  ws.onerror = () => try { ws.close(); } catch {}
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.serverTime) noteServerTime(m.serverTime);
@@ -173,25 +162,18 @@ function send(obj) {
   if (state.outbox.length < 50) state.outbox.push(obj);
   return false;
 }
-
 function flushOutbox() {
   const items = state.outbox.splice(0);
   items.forEach((o) => { try { state.ws.send(JSON.stringify(o)); } catch {} });
 }
 
-/* ---------- آفست ساعت ---------- */
-function noteServerTime(t) {
-  if (t) state.serverOffset = t - Date.now();
-}
-function serverNow() {
-  return Date.now() + state.serverOffset;
-}
+function noteServerTime(t) { if (t) state.serverOffset = t - Date.now(); }
+function serverNow() { return Date.now() + state.serverOffset; }
 function expectedTime() {
   if (!state.playing) return state.lastCurrentTime;
   return state.lastCurrentTime + (serverNow() - state.lastServerTime) / 1000;
 }
 
-/* ---------- پیام‌های سرور ---------- */
 function handleMessage(m) {
   switch (m.type) {
     case "state":
@@ -212,87 +194,68 @@ function handleMessage(m) {
       updateOwnerUI();
       syncVideoToState();
       break;
-
-    case "users": {
+    case "users":
       state.users = m.users || [];
       const me = state.users.find((u) => u.id === state.userId);
       if (me) state.isOwner = me.owner;
       renderUsers();
       updateOwnerUI();
       break;
-    }
-
     case "chat":
       state.chat.push(m.message);
       renderChat();
       break;
-
     case "chat_clear":
       state.chat = [];
       renderChat();
       break;
-
     case "play":
       state.playing = true;
       state.lastCurrentTime = m.currentTime;
       state.lastServerTime = serverNow();
       syncVideoToState();
       break;
-
     case "pause":
       state.playing = false;
       state.lastCurrentTime = m.currentTime;
       state.lastServerTime = serverNow();
       video.pause();
       break;
-
     case "seek":
       state.lastCurrentTime = m.currentTime;
       state.lastServerTime = serverNow();
       try { video.currentTime = m.currentTime; } catch {}
       if (state.playing) safePlay();
       break;
-
     case "movie":
       state.videoUrl = m.videoUrl;
       loadVideo(m.videoUrl);
       break;
-
     case "locked":
       state.roomLocked = !!m.locked;
       updateOwnerUI();
       break;
-
     case "invite_rotated":
       state.inviteToken = m.inviteToken;
       refreshInviteLink();
       toast("لینک دعوت تغییر کرد.");
       break;
-
     case "owner_changed":
       toast("مالکیت منتقل شد.");
       break;
-
     case "kicked":
       toast("شما از اتاق حذف شدید.", 5000);
       leaveRoom();
       break;
-
     case "room_closed":
       toast("اتاق بسته شد.", 5000);
       leaveRoom();
       break;
-
-    case "pong":
-      break;
-
-    case "error":
-      toast(m.message || "خطا");
-      break;
+    case "pong": break;
+    case "error": toast(m.message || "خطا"); break;
   }
 }
 
-/* ---------- رندر ---------- */
 function renderUsers() {
   const ul = $("#userList");
   ul.innerHTML = "";
@@ -332,7 +295,6 @@ function renderChat() {
   log.scrollTop = log.scrollHeight;
 }
 
-/* ---------- ویدئو ---------- */
 function destroyHls() {
   if (state.hls) try { state.hls.destroy(); } catch {}
   state.hls = null;
@@ -342,14 +304,12 @@ function loadVideo(url) {
   destroyHls();
   video.onloadedmetadata = null;
   video.onerror = null;
-
   if (!url) {
     video.removeAttribute("src");
     video.load();
     videoOverlay.textContent = "فیلمی انتخاب نشده است.";
     return;
   }
-
   const isHls = /\.m3u8($|\?)/i.test(url);
   videoOverlay.textContent = "در حال بارگذاری...";
 
@@ -366,12 +326,10 @@ function loadVideo(url) {
       if (d.fatal) videoOverlay.textContent = "خطا در HLS.";
     });
   } else if (isHls && video.canPlayType("application/vnd.apple.mpegurl")) {
-    video.src = url;
-    video.load();
+    video.src = url; video.load();
     video.onloadedmetadata = () => { videoOverlay.textContent = ""; syncVideoToState(); };
   } else {
-    video.src = url;
-    video.load();
+    video.src = url; video.load();
     video.onloadedmetadata = () => { videoOverlay.textContent = ""; syncVideoToState(); };
     video.onerror = () => { videoOverlay.textContent = "خطا در بارگذاری ویدئو (CORS یا لینک)."; };
   }
@@ -382,28 +340,21 @@ function syncVideoToState() {
   if (Number.isFinite(target) && Math.abs(video.currentTime - target) > 1.5) {
     try { video.currentTime = target; } catch {}
   }
-  if (state.playing) safePlay();
-  else video.pause();
+  if (state.playing) safePlay(); else video.pause();
 }
-
 function safePlay() {
   const p = video.play();
   if (p && p.catch) p.catch(() => {});
 }
-
-/* ---------- اصلاح دریفت ---------- */
 function startDriftCheck() {
   if (state.driftTimer) clearInterval(state.driftTimer);
   state.driftTimer = setInterval(() => {
     if (!state.playing) return;
     const drift = video.currentTime - expectedTime();
-    if (Math.abs(drift) > 3) {
-      try { video.currentTime = expectedTime(); } catch {}
-    }
+    if (Math.abs(drift) > 3) try { video.currentTime = expectedTime(); } catch {}
   }, 5000);
 }
 
-/* ---------- کنترل پخش (فقط مالک) ---------- */
 video.addEventListener("play", () => {
   if (!state.isOwner || !state.wsOpen) return;
   send({ type: "control", action: "play", currentTime: video.currentTime });
@@ -417,7 +368,6 @@ video.addEventListener("seeked", () => {
   send({ type: "control", action: "seek", currentTime: video.currentTime });
 });
 
-/* ---------- پنل مالک ---------- */
 $("#btnPlay").onclick = () => send({ type: "control", action: "play", currentTime: video.currentTime });
 $("#btnPause").onclick = () => send({ type: "control", action: "pause", currentTime: video.currentTime });
 $("#btnLock").onclick = () => send({ type: "lock", locked: !state.roomLocked });
@@ -435,7 +385,6 @@ $("#btnChangeMovie").onclick = () => {
   if (!url) return toast("لینک فیلم را وارد کنید.");
   send({ type: "set_movie", videoUrl: url });
 };
-
 $("#btnCopyInvite").onclick = async () => {
   try {
     await navigator.clipboard.writeText($("#inviteLink").value);
@@ -456,17 +405,15 @@ function updateOwnerUI() {
   });
   refreshInviteLink();
 }
-
 function refreshInviteLink() {
   if (!state.inviteToken) {
     $("#inviteLink").value = "لینک دعوت غیرفعال است.";
     return;
   }
   $("#inviteLink").value =
-    `${location.origin}${location.pathname}?room=${encodeURIComponent(state.roomId)}&invite=${encodeURIComponent(state.inviteToken)}`;
+    `${location.origin}/?room=${encodeURIComponent(state.roomId)}&invite=${encodeURIComponent(state.inviteToken)}`;
 }
 
-/* ---------- چت ---------- */
 $("#chatForm").addEventListener("submit", (e) => {
   e.preventDefault();
   const inp = $("#chatInput");
@@ -476,7 +423,6 @@ $("#chatForm").addEventListener("submit", (e) => {
   inp.value = "";
 });
 
-/* ---------- خروج ---------- */
 function leaveRoom() {
   if (state.driftTimer) clearInterval(state.driftTimer);
   destroyHls();
@@ -495,5 +441,4 @@ $("#btnLeave").onclick = () => {
   }
 };
 
-/* ---------- heartbeat ---------- */
 setInterval(() => { if (state.wsOpen) send({ type: "ping" }); }, 25000);

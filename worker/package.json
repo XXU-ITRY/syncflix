@@ -1,11 +1,8 @@
 {
-  "name": "syncflix-worker",
-  "version": "3.0.0",
+  "name": "syncflix",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "deploy": "wrangler deploy"
-  },
   "devDependencies": {
     "wrangler": "^4.0.0"
   }

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SyncFlix — تماشای هم‌زمان</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" defer></script>
+</head>
+<body>
+  <section id="landing" class="view active">
+    <div class="brand">
+      <h1>Sync<span>Flix</span></h1>
+      <p>فیلم را با دوستانت هم‌زمان ببین.</p>
+    </div>
+
+    <div class="card">
+      <h2>ساخت اتاق</h2>
+      <label>نام نمایشی
+        <input id="createName" maxlength="24" placeholder="مثلاً: علی" />
+      </label>
+      <label>لینک فیلم (اختیاری — MP4 یا HLS)
+        <input id="createMovie" type="url" placeholder="https://example.com/movie.mp4" />
+      </label>
+      <button id="btnCreate" class="btn primary">ساخت اتاق</button>
+    </div>
+
+    <div class="card">
+      <h2>ورود به اتاق</h2>
+      <label>کد اتاق
+        <input id="joinCode" maxlength="32" placeholder="کد اتاق" />
+      </label>
+      <label>نام نمایشی
+        <input id="joinName" maxlength="24" placeholder="مثلاً: مریم" />
+      </label>
+      <button id="btnJoin" class="btn">ورود</button>
+      <p id="joinError" class="error"></p>
+    </div>
+  </section>
+
+  <section id="room" class="view">
+    <header class="roomHeader">
+      <button id="btnLeave" class="btn ghost small">خروج</button>
+      <span id="roomCode" class="roomCode"></span>
+      <span id="connStatus" class="status offline">قطع</span>
+    </header>
+
+    <main class="roomLayout">
+      <div class="playerCol">
+        <div class="videoWrap">
+          <video id="video" controls playsinline crossorigin="anonymous"></video>
+          <div id="videoOverlay" class="videoOverlay"></div>
+        </div>
+
+        <div class="inviteRow">
+          <input id="inviteLink" readonly placeholder="لینک دعوت" />
+          <button id="btnCopyInvite" class="btn small">کپی</button>
+        </div>
+
+        <div id="ownerPanel" class="ownerPanel hidden">
+          <h3>پنل مدیریت</h3>
+          <div class="ownerGrid">
+            <button id="btnPlay" class="btn small">▶ پخش</button>
+            <button id="btnPause" class="btn small">⏸ توقف</button>
+            <button id="btnLock" class="btn small">🔒 قفل</button>
+            <button id="btnRotateInvite" class="btn small">♻ لینک دعوت</button>
+            <button id="btnClearChat" class="btn small danger">🧹 چت</button>
+            <button id="btnCloseRoom" class="btn small danger">بستن اتاق</button>
+          </div>
+          <div class="inline">
+            <input id="ownerMovie" type="url" placeholder="https://...mp4 یا .m3u8" />
+            <button id="btnChangeMovie" class="btn small">تغییر فیلم</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="sideCol">
+        <div class="usersBox">
+          <h3>حاضرین <span id="userCount">0</span></h3>
+          <ul id="userList"></ul>
+        </div>
+        <div class="chatBox">
+          <h3>چت</h3>
+          <div id="chatLog" class="chatLog"></div>
+          <form id="chatForm" class="chatForm">
+            <input id="chatInput" maxlength="500" placeholder="پیام..." autocomplete="off" />
+            <button class="btn small" type="submit">ارسال</button>
+          </form>
+        </div>
+      </aside>
+    </main>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

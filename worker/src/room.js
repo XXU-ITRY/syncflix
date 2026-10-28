@@ -9,7 +9,6 @@ export class RoomDO {
     this.room = null;
     this._chatRate = new Map();
 
-    // بازیابی سوکت‌های hibernated
     try {
       this.state.getWebSockets().forEach((ws) => {
         const att = ws.deserializeAttachment();
@@ -33,14 +32,12 @@ export class RoomDO {
   async fetch(request) {
     await this.ensureLoaded();
     const url = new URL(request.url);
-    const upgrade = request.headers.get("Upgrade");
-    if (upgrade === "websocket") return this.handleWS(request, url);
+    if (request.headers.get("Upgrade") === "websocket") return this.handleWS(request, url);
     if (url.pathname.endsWith("/init")) return this.handleInit(request);
     if (url.pathname.endsWith("/join")) return this.handleJoin(request);
     return json({ error: "not found" }, 404);
   }
 
-  /* ---------- init ---------- */
   async handleInit(request) {
     await this.ensureLoaded();
     if (this.room) return json({ error: "room exists" }, 409);
@@ -69,7 +66,6 @@ export class RoomDO {
     return json({ ok: true, userId: ownerId, sessionToken: ownerToken });
   }
 
-  /* ---------- join ---------- */
   async handleJoin(request) {
     await this.ensureLoaded();
     const body = await request.json();
@@ -81,7 +77,6 @@ export class RoomDO {
     }
     const name = String(body.displayName || "").trim().slice(0, 24);
     if (!name) return json({ error: "نام الزامی است." }, 400);
-
     const blocked = this.room.users.find((u) => u.name === name && u.blocked);
     if (blocked) return json({ error: "ورود شما مسدود شده است." }, 403);
 
@@ -99,7 +94,6 @@ export class RoomDO {
     });
   }
 
-  /* ---------- WebSocket ---------- */
   async handleWS(request, url) {
     await this.ensureLoaded();
     const token = url.searchParams.get("token");
@@ -212,7 +206,6 @@ export class RoomDO {
   }
   async webSocketError(ws) { await this.webSocketClose(ws); }
 
-  /* ---------- chat ---------- */
   handleChat(user, m) {
     const text = String(m.text || "").trim().slice(0, 500);
     if (!text) return;
@@ -230,7 +223,6 @@ export class RoomDO {
     this.broadcast({ type: "chat", message: msg });
   }
 
-  /* ---------- playback ---------- */
   handleControl(m) {
     const ct = Math.max(0, Number(m.currentTime) || 0);
     if (m.action === "play") {
@@ -247,12 +239,10 @@ export class RoomDO {
     this.save();
   }
 
-  /* ---------- kick ---------- */
   async kick(targetId) {
     const u = this.room.users.find((x) => x.id === targetId);
     if (!u || u.owner) return;
     u.kicked = true; u.blocked = true; u.online = false;
-    // باطل کردن همه نشست‌های این کاربر
     for (const [tok, s] of this.sessions) {
       if (s.userId === targetId) this.sessions.delete(tok);
     }
@@ -266,7 +256,6 @@ export class RoomDO {
     this.broadcast({ type: "users", users: this.publicUsers() });
   }
 
-  /* ---------- transfer owner ---------- */
   async transferOwner(targetId) {
     const n = this.room.users.find((u) => u.id === targetId);
     if (!n || n.kicked || n.blocked) return;
@@ -289,7 +278,6 @@ export class RoomDO {
     }
   }
 
-  /* ---------- cleanup ---------- */
   async scheduleCleanup() {
     const next = now() + 6 * 60 * 60 * 1000;
     const cur = await this.state.storage.getAlarm();
@@ -309,7 +297,6 @@ export class RoomDO {
     await this.scheduleCleanup();
   }
 
-  /* ---------- helpers ---------- */
   publicUsers() {
     return this.room.users.map((u) => ({
       id: u.id, name: u.name, owner: u.id === this.room.ownerId, online: !!u.online,

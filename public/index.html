@@ -2,89 +2,196 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0f" />
   <title>SyncFlix — تماشای هم‌زمان</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
   <link rel="stylesheet" href="/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js" defer></script>
 </head>
 <body>
+
   <section id="landing" class="view active">
     <div class="brand">
+      <div class="brandLogo">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
+          <polygon points="6 3 20 12 6 21 6 3"/>
+        </svg>
+      </div>
       <h1>Sync<span>Flix</span></h1>
       <p>فیلم را با دوستانت هم‌زمان ببین.</p>
     </div>
 
     <div class="card">
-      <h2>ساخت اتاق</h2>
+      <h2>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        ساخت اتاق
+      </h2>
       <label>نام نمایشی
-        <input id="createName" maxlength="24" placeholder="مثلاً: علی" />
+        <input id="createName" maxlength="24" placeholder="مثلاً: علی" autocomplete="off" />
       </label>
       <label>لینک فیلم (اختیاری — MP4 یا HLS)
-        <input id="createMovie" type="url" placeholder="https://example.com/movie.mp4" />
+        <input id="createMovie" type="url" placeholder="https://example.com/movie.mp4" dir="ltr" />
       </label>
-      <button id="btnCreate" class="btn primary">ساخت اتاق</button>
+      <button id="btnCreate" class="btn primary" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        ساخت اتاق
+      </button>
     </div>
 
     <div class="card">
-      <h2>ورود به اتاق</h2>
+      <h2>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        ورود به اتاق
+      </h2>
       <label>کد اتاق
-        <input id="joinCode" maxlength="32" placeholder="کد اتاق" />
+        <input id="joinCode" maxlength="32" placeholder="کد اتاق را وارد کنید" dir="ltr" />
       </label>
       <label>نام نمایشی
-        <input id="joinName" maxlength="24" placeholder="مثلاً: مریم" />
+        <input id="joinName" maxlength="24" placeholder="مثلاً: مریم" autocomplete="off" />
       </label>
-      <button id="btnJoin" class="btn">ورود</button>
+      <button id="btnJoin" class="btn" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        ورود
+      </button>
       <p id="joinError" class="error"></p>
     </div>
   </section>
 
   <section id="room" class="view">
     <header class="roomHeader">
-      <button id="btnLeave" class="btn ghost small">خروج</button>
+      <button id="btnLeave" class="btn ghost small iconBtn" type="button" title="خروج" aria-label="خروج">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>خروج</span>
+      </button>
       <span id="roomCode" class="roomCode"></span>
+      <span id="pingInfo" class="pingInfo" title="تاخیر اتصال">— ms</span>
       <span id="connStatus" class="status offline">قطع</span>
     </header>
 
     <main class="roomLayout">
       <div class="playerCol">
         <div class="videoWrap">
-          <video id="video" controls playsinline crossorigin="anonymous"></video>
+          <video id="video" controls playsinline webkit-playsinline crossorigin="anonymous"></video>
           <div id="videoOverlay" class="videoOverlay"></div>
         </div>
 
+        <!-- نوار کنترل سفارشی -->
+        <div class="playerControls">
+          <div class="pcLeft">
+            <button id="btnSync" class="iconBtn" title="همگام‌سازی با زمان زنده" aria-label="همگام">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+            <div class="volWrap">
+              <button id="btnMute" class="iconBtn" title="قطع صدا (M)" aria-label="قطع صدا">
+                <svg class="ic-vol-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <svg class="ic-vol-off hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+              </button>
+              <input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="1" aria-label="میزان صدا" />
+            </div>
+          </div>
+          <div class="pcRight">
+            <div id="qualityWrap" class="hidden">
+              <select id="qualitySelect" class="miniSelect" title="کیفیت"></select>
+            </div>
+            <select id="speedSelect" class="miniSelect" title="سرعت پخش">
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+            <button id="btnPiP" class="iconBtn" title="تصویر در تصویر (P)" aria-label="PiP">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="8" height="6" rx="1" fill="currentColor"/></svg>
+            </button>
+            <button id="btnFullscreen" class="iconBtn" title="تمام صفحه (F)" aria-label="تمام صفحه">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            </button>
+          </div>
+        </div>
+
         <div class="inviteRow">
-          <input id="inviteLink" readonly placeholder="لینک دعوت" />
-          <button id="btnCopyInvite" class="btn small">کپی</button>
+          <input id="inviteLink" readonly placeholder="لینک دعوت" dir="ltr" />
+          <button id="btnCopyInvite" class="btn small" type="button">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>کپی</span>
+          </button>
+        </div>
+
+        <div class="subtitleRow">
+          <input id="subtitleUrl" type="url" placeholder="لینک زیرنویس (.vtt یا .srt)" dir="ltr" />
+          <button id="btnLoadSub" class="btn small" type="button">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="14" x2="12" y2="14"/><line x1="6" y1="18" x2="18" y2="18"/></svg>
+            <span>بارگذاری</span>
+          </button>
         </div>
 
         <div id="ownerPanel" class="ownerPanel hidden">
-          <h3>پنل مدیریت</h3>
+          <h3>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            پنل مدیریت
+          </h3>
+
           <div class="ownerGrid">
-            <button id="btnPlay" class="btn small">▶ پخش</button>
-            <button id="btnPause" class="btn small">⏸ توقف</button>
-            <button id="btnLock" class="btn small">🔒 قفل</button>
-            <button id="btnRotateInvite" class="btn small">♻ لینک دعوت</button>
-            <button id="btnClearChat" class="btn small danger">🧹 چت</button>
-            <button id="btnCloseRoom" class="btn small danger">بستن اتاق</button>
+            <button id="btnPlay" class="btn small" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              <span>پخش</span>
+            </button>
+            <button id="btnPause" class="btn small" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+              <span>توقف</span>
+            </button>
+            <button id="btnLock" class="btn small" type="button">
+              <svg class="ic-lock" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <svg class="ic-unlock hidden" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+              <span>قفل</span>
+            </button>
+            <button id="btnRotateInvite" class="btn small" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>لینک دعوت</span>
+            </button>
+            <button id="btnClearChat" class="btn small danger" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>چت</span>
+            </button>
+            <button id="btnCloseRoom" class="btn small danger" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span>بستن اتاق</span>
+            </button>
           </div>
+
           <div class="inline">
-            <input id="ownerMovie" type="url" placeholder="https://...mp4 یا .m3u8" />
-            <button id="btnChangeMovie" class="btn small">تغییر فیلم</button>
+            <input id="ownerMovie" type="url" placeholder="https://...mp4 یا .m3u8" dir="ltr" />
+            <button id="btnChangeMovie" class="btn small" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><polygon points="22 8 16 12 22 16 22 8"/></svg>
+              <span>تغییر فیلم</span>
+            </button>
           </div>
         </div>
       </div>
 
       <aside class="sideCol">
         <div class="usersBox">
-          <h3>حاضرین <span id="userCount">0</span></h3>
+          <h3>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            حاضرین <span id="userCount" class="badge">0</span>
+          </h3>
           <ul id="userList"></ul>
         </div>
+
         <div class="chatBox">
-          <h3>چت</h3>
+          <h3>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            چت
+          </h3>
           <div id="chatLog" class="chatLog"></div>
           <form id="chatForm" class="chatForm">
             <input id="chatInput" maxlength="500" placeholder="پیام..." autocomplete="off" />
-            <button class="btn small" type="submit">ارسال</button>
+            <button class="btn small" type="submit" aria-label="ارسال">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <span>ارسال</span>
+            </button>
           </form>
         </div>
       </aside>

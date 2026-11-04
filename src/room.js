@@ -23,16 +23,34 @@ export class RoomDO {
   async ensureLoaded() {
     if (this.room) return;
     this.room = (await this.state.storage.get("room")) || null;
+    if (!this.room) return;
+    if (!this.room.playback.rate) this.room.playback.rate = 1;
+    // بازیابی sessionها از storage (مقاوم در برابر hibernation)
+    const stored = await this.state.storage.get("sessions");
+    if (stored) {
+      for (const [tok, uid] of Object.entries(stored)) {
+        this.sessions.set(tok, { userId: uid });
+      }
+    }
   }
 
   async save() {
     if (this.room) await this.state.storage.put("room", this.room);
   }
 
+  async saveSessions() {
+    const obj = {};
+    for (const [tok, sess] of this.sessions) {
+      obj[tok] = sess.userId;
+    }
+    await this.state.storage.put("sessions", obj);
+  }
+
   async fetch(request) {
     await this.ensureLoaded();
     const url = new URL(request.url);
-    if (request.headers.get("Upgrade") === "websocket") return this.handleWS(request, url);
+    const upgrade = request.headers.get("Upgrade");
+    if (upgrade === "websocket") return this.handleWS(request, url);
     if (url.pathname.endsWith("/init")) return this.handleInit(request);
     if (url.pathname.endsWith("/join")) return this.handleJoin(request);
     return json({ error: "not found" }, 404);
@@ -58,10 +76,11 @@ export class RoomDO {
         owner: true, online: false, kicked: false, blocked: false,
       }],
       chat: [],
-      playback: { playing: false, currentTime: 0, updatedAt: now() },
+      playback: { playing: false, currentTime: 0, rate: 1, updatedAt: now() },
     };
     this.sessions.set(ownerToken, { userId: ownerId });
     await this.save();
+    await this.saveSessions();
     await this.scheduleCleanup();
     return json({ ok: true, userId: ownerId, sessionToken: ownerToken });
   }
@@ -88,6 +107,7 @@ export class RoomDO {
     this.sessions.set(token, { userId });
     this.room.lastActivity = now();
     await this.save();
+    await this.saveSessions();
     return json({
       ok: true, userId, sessionToken: token,
       isOwner: false, inviteToken: this.room.inviteToken,
@@ -224,17 +244,24 @@ export class RoomDO {
   }
 
   handleControl(m) {
-    const ct = Math.max(0, Number(m.currentTime) || 0);
+    if (!this.room.playback.rate) this.room.playback.rate = 1;
     if (m.action === "play") {
-      this.room.playback = { playing: true, currentTime: ct, updatedAt: now() };
+      const ct = Math.max(0, Number(m.currentTime) || 0);
+      this.room.playback = { ...this.room.playback, playing: true, currentTime: ct, updatedAt: now() };
       this.broadcast({ type: "play", currentTime: ct, serverTime: now() });
     } else if (m.action === "pause") {
-      this.room.playback = { playing: false, currentTime: ct, updatedAt: now() };
+      const ct = Math.max(0, Number(m.currentTime) || 0);
+      this.room.playback = { ...this.room.playback, playing: false, currentTime: ct, updatedAt: now() };
       this.broadcast({ type: "pause", currentTime: ct, serverTime: now() });
     } else if (m.action === "seek") {
+      const ct = Math.max(0, Number(m.currentTime) || 0);
       this.room.playback.currentTime = ct;
       this.room.playback.updatedAt = now();
       this.broadcast({ type: "seek", currentTime: ct, serverTime: now() });
+    } else if (m.action === "rate") {
+      const rate = Math.max(0.25, Math.min(2, Number(m.rate) || 1));
+      this.room.playback.rate = rate;
+      this.broadcast({ type: "rate", rate, serverTime: now() });
     }
     this.save();
   }
@@ -253,6 +280,7 @@ export class RoomDO {
       this.sockets.delete(targetId);
     }
     await this.save();
+    await this.saveSessions();
     this.broadcast({ type: "users", users: this.publicUsers() });
   }
 
@@ -273,7 +301,11 @@ export class RoomDO {
     if (i >= 0) {
       this.room.users.splice(i, 1);
       this.sockets.delete(userId);
+      for (const [tok, s] of this.sessions) {
+        if (s.userId === userId) this.sessions.delete(tok);
+      }
       await this.save();
+      await this.saveSessions();
       this.broadcast({ type: "users", users: this.publicUsers() });
     }
   }
@@ -314,6 +346,7 @@ export class RoomDO {
       inviteToken: userId === this.room.ownerId ? this.room.inviteToken : null,
       playing: this.room.playback.playing,
       currentTime: this.room.playback.currentTime,
+      rate: this.room.playback.rate || 1,
       serverTime: now(),
       me: me ? { id: me.id, name: me.name } : null,
     };
